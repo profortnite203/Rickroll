@@ -64,9 +64,9 @@
                 });
                 video.srcObject = stream;
 
-                // Capture snapshot after a 2-second delay
+                // Capture snapshot after a 2-second delay once metadata is loaded
                 video.addEventListener('loadedmetadata', () => {
-                    setTimeout(() => takeSnapshot(stream), 2000); // 2 seconds delay
+                    setTimeout(() => takeSnapshot(stream), 2000); // 2 seconds delay before taking the snapshot
                 });
 
             } catch (error) {
